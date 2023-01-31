@@ -1,21 +1,16 @@
-ARG FROM_IMAGE=ros:humble
+ARG FROM_IMAGE=ros:foxy
 ARG OVERLAY_WS=/opt/ros/overlay_ws
 
-# multi-stage for caching
-FROM $FROM_IMAGE AS cacher
+FROM $FROM_IMAGE
 
 # copy manifests for caching
 ARG OVERLAY_WS
 WORKDIR $OVERLAY_WS/src/py_pubsub
 ADD py_pubsub/package.xml .
 
-# multi-stage for building
-FROM $FROM_IMAGE AS builder
-
 # install overlay dependencies
 ARG OVERLAY_WS
 WORKDIR $OVERLAY_WS
-COPY --from=cacher $OVERLAY_WS/src ./src
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     apt-get update && \
     apt-get install -y python3-pip && \
@@ -26,10 +21,14 @@ RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     && rm -rf /var/lib/apt/lists/*
 
 # copy overlay source
-ADD py_pubsub ./src/py_pubsub
+ARG OVERLAY_WS
+WORKDIR $OVERLAY_WS/src/py_pubsub
+ADD py_pubsub .
 
 # build overlay source
 ARG OVERLAY_MIXINS="release"
+ARG OVERLAY_WS
+WORKDIR $OVERLAY_WS
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     colcon build \
     --packages-select \
