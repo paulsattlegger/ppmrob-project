@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  view:
+    build: ./image-pipeline
+    environment:
+      - DISPLAY=host.docker.internal:0
+    command:
+      [
+        "ros2",
+        "run",
+        "image_view",
+        "image_view",
+        "--ros-args",
+        "--remap",
+        "/image:=/drone1/image_raw"
+      ]
+  publish:
+    build: ./notebook
+    command: [ "ros2", "run", "py_pubsub", "talker" ]
+    tty: true
+    volumes:
+      - "./data:/opt/ros/overlay_ws/data"
