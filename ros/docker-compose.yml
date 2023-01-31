@@ -12,11 +12,27 @@ services:
         "image_view",
         "--ros-args",
         "--remap",
-        "/image:=/drone1/image_raw"
+        "/image:=${TELLO_IMAGE_RAW}"
       ]
-  publish:
+  replay:
     build: ./notebook
-    command: [ "ros2", "run", "py_pubsub", "talker" ]
+    command:
+      [
+        "ros2",
+        "run",
+        "py_pubsub",
+        "talker",
+        "--ros-args",
+        "--remap",
+        "/image:=${TELLO_IMAGE_RAW}"
+      ]
     tty: true
     volumes:
       - "./data:/opt/ros/overlay_ws/data"
+  inference:
+    build: ./notebook
+    volumes:
+      - "./notebook:/opt/ros/overlay_ws/src"
+    tty: true
+  tello:
+    build: ./tello

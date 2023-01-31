@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  learning:
+    image: nvcr.io/nvidia/pytorch:22.08-py3
+    ipc: host
+    volumes:
+      - ".:/workspace/ppmrob"
+    tty: true
