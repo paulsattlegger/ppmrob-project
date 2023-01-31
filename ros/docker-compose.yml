@@ -28,11 +28,13 @@ services:
       ]
     tty: true
     volumes:
-      - "./data:/opt/ros/overlay_ws/data"
+      - "./notebook:/opt/ros/overlay_ws/src"
+      - "./data/images:/opt/ros/overlay_ws/data"
   inference:
     build: ./notebook
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
+      - "./data:/opt/ros/overlay_ws/data"
     tty: true
   tello:
     build: ./tello

@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
-import os
-
 import cv2
 import rclpy
 from cv_bridge import CvBridge
@@ -26,13 +23,13 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__("minimal_publisher")
         self.bridge = CvBridge()
-        self.publisher_ = self.create_publisher(Image, "/drone1/image_raw", 10)
+        self.publisher_ = self.create_publisher(Image, "/image", 10)
         timer_period = 1 / 30  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
 
     def timer_callback(self):
-        path = f"data/picture5_{self.i}.png"
+        path = f"data/images/picture5_{self.i}.png"
         image = cv2.imread(path)
         msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
         self.publisher_.publish(msg)
