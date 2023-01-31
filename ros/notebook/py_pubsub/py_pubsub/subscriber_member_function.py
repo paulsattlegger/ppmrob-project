@@ -12,25 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cv2
 import rclpy
+import torchvision.transforms as transforms
+from cv_bridge import CvBridge, CvBridgeError
 from rclpy.node import Node
-
-from std_msgs.msg import String
+from sensor_msgs.msg import Image
 
 
 class MinimalSubscriber(Node):
-
     def __init__(self):
-        super().__init__('minimal_subscriber')
+        super().__init__("minimal_subscriber")
+        self.bridge = CvBridge()
         self.subscription = self.create_subscription(
-            String,
-            'topic',
-            self.listener_callback,
-            10)
-        self.subscription  # prevent unused variable warning
+            Image, "/drone1/image_raw", self.listener_callback, 10
+        )
 
-    def listener_callback(self, msg):
-        self.get_logger().info('I heard: "%s"' % msg.data)
+    def listener_callback(self, msg: Image):
+        self.get_logger().info("Image received")
+        try:
+            image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        except CvBridgeError:
+            return
+
+        to_tensor = transforms.ToTensor()
+        tensor = to_tensor(image)
+
+        tensor
+
+        # TODO: inference
+        # TODO: publish position estimation
+        # TODO: publish bounding box image
 
 
 def main(args=None):
@@ -47,5 +59,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
