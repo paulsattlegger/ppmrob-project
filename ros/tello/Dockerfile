@@ -26,7 +26,8 @@ ARG OVERLAY_WS
 WORKDIR $OVERLAY_WS
 COPY --from=cacher /tmp/$OVERLAY_WS/src ./src
 
-RUN apt-get update && \
+RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
+    apt-get update && \
     apt-get install -y libasio-dev && \
     rosdep install -y \
     --from-paths \
