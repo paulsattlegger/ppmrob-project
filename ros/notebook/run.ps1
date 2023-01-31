@@ -1,7 +1,7 @@
-$TAG = 'ppmrob-ros-notebook:latest'
+$TAG = "ppmrob-ros-notebook:latest"
 
 docker build --tag "$TAG" .
 docker run --interactive --rm --tty `
-    --name=ppmrob-ros-notebook `
-    --volume="$(Get-Location):/ros2_ws" `
+    --volume="$(Get-Location):/ros2_ws/src" `
+    --name ppmrob-ros-notebook `
     "$TAG"

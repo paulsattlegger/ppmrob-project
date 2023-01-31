@@ -1,4 +1,4 @@
-$TAG = "ppmrob-ros-tello:latest"
+$TAG = 'ppmrob-ros-tello:latest'
 
 docker build --tag "$TAG" .
 docker run --interactive --rm --tty `
