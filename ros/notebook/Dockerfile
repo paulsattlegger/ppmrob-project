@@ -1,4 +1,4 @@
-ARG FROM_IMAGE=ros:foxy
+ARG FROM_IMAGE=ros:humble
 ARG OVERLAY_WS=/opt/ros/overlay_ws
 
 FROM $FROM_IMAGE
