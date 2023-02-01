@@ -1,9 +1,9 @@
-ARG FROM_IMAGE=ros:humble
+ARG FROM_IMAGE=osrf/ros:humble-desktop
 ARG OVERLAY_WS=/opt/ros/overlay_ws
 
 FROM $FROM_IMAGE
 
-# copy manifests for caching
+# copy manifest for caching
 ARG OVERLAY_WS
 WORKDIR $OVERLAY_WS/src/py_pubsub
 ADD py_pubsub/package.xml .
@@ -13,7 +13,10 @@ ARG OVERLAY_WS
 WORKDIR $OVERLAY_WS
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     apt-get update && \
-    apt-get install -y python3-pip && \
+    apt-get install -y \
+    ros-${ROS_DISTRO}-image-pipeline \
+    ros-${ROS_DISTRO}-rqt* \
+    python3-pip && \
     rosdep install -y \
     --from-paths \
     src \

@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   view1:
-    build: ./image-pipeline
+    build: ./notebook
     environment:
       - DISPLAY=host.docker.internal:0
     command:
@@ -17,7 +17,7 @@ services:
         "autosize:=true"
       ]
   view2:
-    build: ./image-pipeline
+    build: ./notebook
     environment:
       - DISPLAY=host.docker.internal:0
     command:
@@ -47,11 +47,17 @@ services:
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
       - "./data:/opt/ros/overlay_ws/data"
+  console:
+    build: ./notebook
+    environment:
+      - DISPLAY=host.docker.internal:0
+    command: [ "ros2", "run", "rqt_console", "rqt_console" ]
   inference:
     build: ./notebook
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
       - "./data:/opt/ros/overlay_ws/data"
+      - "~/.cache:/root/.cache"
     command:
       [
         "ros2",
@@ -62,10 +68,12 @@ services:
         "--remap",
         "/image:=${TELLO_IMAGE_RAW}"
       ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
   tello:
     build: ./tello
-  console:
-    build: ./rqt
-    environment:
-      - DISPLAY=host.docker.internal:0
-    command: [ "ros2", "run", "rqt_console", "rqt_console" ]
