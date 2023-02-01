@@ -14,6 +14,7 @@
 
 from enum import Enum
 
+import cv2
 import numpy as np
 import rclpy
 import torchvision
@@ -30,11 +31,31 @@ import torch
 IMG_CENTER_X = 480
 IMG_CENTER_Y = 360
 SCORE_THRESHOLD = 0.2
+REAL_HEIGHT = 300  # mm
+IMAGE_HEIGHT = 720  # px
+FOCAL_LENGTH = 2  # mm
+SENSOR_HEIGHT = 2.77  # mm
 
 
 class Label(Enum):
     FRONT = 1
     BACK = 2
+
+
+def cv2_to_pt(rgb8_image):
+    # reshape the image from (H x W x C) to (C x H x W) format
+    np_rgb8_image = rgb8_image.transpose((2, 0, 1))
+    # create a tensor from a numpy.ndarray
+    pt_rgb8_image = torch.from_numpy(np_rgb8_image)
+    return pt_rgb8_image
+
+
+def pt_to_cv2(rgb8_image):
+    # reshape the image from (C x H x W) to (H x W x C) format
+    cv_rgb8_image = rgb8_image.numpy().transpose((1, 2, 0))
+    # convert rgb8 to bgr8
+    cv_bgr8_image = cv2.cvtColor(cv_rgb8_image, cv2.COLOR_RGB2BGR)
+    return cv_bgr8_image
 
 
 class MinimalSubscriber(Node):
@@ -44,8 +65,10 @@ class MinimalSubscriber(Node):
         self.subscription = self.create_subscription(
             Image, "/image", self.listener_callback, 10
         )
-        self.publisher_distance_movement = self.create_publisher(String, "distance", 10)
-        self.publisher_bounding_box = self.create_publisher(Image, "bounding_box", 10)
+        self.publisher_distance_movement = self.create_publisher(
+            String, "/distance", 10
+        )
+        self.publisher_bounding_box = self.create_publisher(Image, "/bounding_box", 10)
         self.model = self.load_model()
         # inference on the GPU or on the CPU, if a GPU is not available
         self.device = (
@@ -57,17 +80,19 @@ class MinimalSubscriber(Node):
     def listener_callback(self, msg: Image):
         self.get_logger().info("Image received")
         try:
-            image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+            # convert the image from BGR to RGB format
+            cv_rgb8_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="rgb8")
         except CvBridgeError:
             return
 
         to_tensor = transforms.ToTensor()
-        tensor = to_tensor(image)
+        tensor = to_tensor(cv_rgb8_image)
 
         prediction = self.inference(tensor)
-        box = prediction[0]["boxes"].cpu().numpy()[0]
-        self.publish_distance_movement(box)
-        self.publish_bounding_box(box)
+        if len(prediction[0]["boxes"]) > 0:
+            box = prediction[0]["boxes"].numpy()[0]
+            self.publish_distance_movement(box)
+            self.publish_bounding_box(cv_rgb8_image, prediction)
 
     def load_model(self):
         # our dataset has three classes - background, front and back
@@ -79,9 +104,11 @@ class MinimalSubscriber(Node):
         in_features = model.roi_heads.box_predictor.cls_score.in_features
         # replace the pre-trained head with a new one
         model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-        # TODO: data/model/fasterrcnn_resnet50_fpn.pt
         model.load_state_dict(
-            torch.load("fasterrcnn_resnet50_fpn.pt", map_location=torch.device("cpu"))
+            torch.load(
+                "data/model/fasterrcnn_resnet50_fpn.pt",
+                map_location=torch.device("cpu"),
+            )
         )
 
         # Use if GPU is available
@@ -96,55 +123,61 @@ class MinimalSubscriber(Node):
             prediction = self.model([image.to(self.device)])
         return prediction
 
+    @staticmethod
     def calc_distance(box):
         _, ytl, _, ybr = box
-        f = 2
-        real_height = 300
-        image_height = 235
-        object_height = abs(ytl - ybr)
-        sensor_height = 2.77
-        distance = (f * real_height * image_height) / (object_height * sensor_height)
+        object_height = abs(ytl - ybr)  # px
+        distance = (FOCAL_LENGTH * REAL_HEIGHT * IMAGE_HEIGHT) / (
+            object_height * SENSOR_HEIGHT
+        )
         return distance
 
+    @staticmethod
     def calc_center(box):
         xtl, ytl, xbr, ybr = box
         center = [(xtl + xbr) / 2, (ytl + ybr) / 2]
         return center
 
     def publish_distance_movement(self, box):
+        _, ytl, _, ybr = box
         distance = self.calc_distance(box)
         box_center_x, _ = self.calc_center(box)
+        msg = String()
+        object_height = abs(ytl - ybr)
+        scale = object_height / REAL_HEIGHT
         if box_center_x > IMG_CENTER_X:
-            msg = f"""Distance to object (mm): {distance:.2f}
-            Move right {box_center_x - IMG_CENTER_X:.0f}px"""
+            error = box_center_x - IMG_CENTER_X
+            msg.data = f"Distance to object (mm): {distance:.2f}, Move right {error:.0f}px {error*scale:.0f}mm"
         else:
-            msg = f"""Distance to object (mm): {distance:.2f}
-            Move left {IMG_CENTER_X - box_center_x:.0f}px"""
-        self.publisher_dist_mov.publish(msg)
+            error = IMG_CENTER_X - box_center_x
+            msg.data = f"Distance to object (mm): {distance:.2f}, Move left {error:.0f}px {error*scale:.0f}mm"
+        self.get_logger().info(msg.data)
+        self.publisher_distance_movement.publish(msg)
 
     def extract_labels(self, prediction):
         length = len(prediction[0]["labels"])
         labels = []
         for i in range(length):
-            if prediction[0]["scores"].cpu().numpy()[i] > SCORE_THRESHOLD:
-                label = Label(prediction[0]["labels"].cpu().numpy()[i]).name
-                score = prediction[0]["scores"].cpu().numpy()[i]
+            if prediction[0]["scores"].numpy()[i] > SCORE_THRESHOLD:
+                label = Label(prediction[0]["labels"].numpy()[i]).name
+                score = prediction[0]["scores"].numpy()[i]
                 txt = "{}:{}".format(label, score)
                 labels.append(txt)
         return labels
 
-    def publish_bounding_box(self, prediction):
+    def publish_bounding_box(self, cv_rgb8_image, prediction):
         labels = self.extract_labels(prediction)
-        tensor = draw_bounding_boxes(
-            image,
+        pt_rgb8_image = draw_bounding_boxes(
+            cv2_to_pt(cv_rgb8_image),
             boxes=prediction[0]["boxes"][prediction[0]["scores"] > SCORE_THRESHOLD],
             labels=labels,
             width=4,
             font_size=150,
         )
 
-        image = np.transpose(tensor.numpy(), (1, 2, 0))
-        msg = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
+        self.get_logger().info("Converting image")
+        msg = self.bridge.cv2_to_imgmsg(pt_to_cv2(pt_rgb8_image), encoding="bgr8")
+        self.get_logger().info("Publishing bounding box")
         self.publisher_bounding_box.publish(msg)
 
 
