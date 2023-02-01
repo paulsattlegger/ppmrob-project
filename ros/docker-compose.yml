@@ -28,7 +28,7 @@ services:
         "image_view",
         "--ros-args",
         "--remap",
-        "/image:=/bounding_box",
+        "/image:=${BOUNDING_BOX_IMAGE_RAW}",
         "-p",
         "autosize:=true"
       ]
