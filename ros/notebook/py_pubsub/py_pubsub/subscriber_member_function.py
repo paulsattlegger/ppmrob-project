@@ -90,7 +90,7 @@ class MinimalSubscriber(Node):
 
         prediction = self.inference(tensor)
         if len(prediction[0]["boxes"]) > 0:
-            box = prediction[0]["boxes"].numpy()[0]
+            box = prediction[0]["boxes"][0]
             self.publish_distance_movement(box)
             self.publish_bounding_box(cv_rgb8_image, prediction)
 
@@ -104,16 +104,7 @@ class MinimalSubscriber(Node):
         in_features = model.roi_heads.box_predictor.cls_score.in_features
         # replace the pre-trained head with a new one
         model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-        model.load_state_dict(
-            torch.load(
-                "data/model/fasterrcnn_resnet50_fpn.pt",
-                map_location=torch.device("cpu"),
-            )
-        )
-
-        # Use if GPU is available
-        # model.load_state_dict(torch.load("data/model/fasterrcnn_resnet50_fpn.pt"))
-
+        model.load_state_dict(torch.load("data/model/fasterrcnn_resnet50_fpn.pt"))
         return model
 
     def inference(self, image):
@@ -158,9 +149,9 @@ class MinimalSubscriber(Node):
         length = len(prediction[0]["labels"])
         labels = []
         for i in range(length):
-            if prediction[0]["scores"].numpy()[i] > SCORE_THRESHOLD:
-                label = Label(prediction[0]["labels"].numpy()[i]).name
-                score = prediction[0]["scores"].numpy()[i]
+            if prediction[0]["scores"][i] > SCORE_THRESHOLD:
+                label = Label(prediction[0]["labels"][i].item()).name
+                score = prediction[0]["scores"][i]
                 txt = "{}:{}".format(label, score)
                 labels.append(txt)
         return labels
