@@ -1,6 +1,6 @@
 version: "3.9"
 services:
-  view:
+  view1:
     build: ./image-pipeline
     environment:
       - DISPLAY=host.docker.internal:0
@@ -12,7 +12,25 @@ services:
         "image_view",
         "--ros-args",
         "--remap",
-        "/image:=${TELLO_IMAGE_RAW}"
+        "/image:=${TELLO_IMAGE_RAW}",
+        "-p",
+        "autosize:=true"
+      ]
+  view2:
+    build: ./image-pipeline
+    environment:
+      - DISPLAY=host.docker.internal:0
+    command:
+      [
+        "ros2",
+        "run",
+        "image_view",
+        "image_view",
+        "--ros-args",
+        "--remap",
+        "/image:=/bounding_box",
+        "-p",
+        "autosize:=true"
       ]
   replay:
     build: ./notebook
@@ -26,15 +44,28 @@ services:
         "--remap",
         "/image:=${TELLO_IMAGE_RAW}"
       ]
-    tty: true
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
-      - "./data/images:/opt/ros/overlay_ws/data"
+      - "./data:/opt/ros/overlay_ws/data"
   inference:
     build: ./notebook
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
       - "./data:/opt/ros/overlay_ws/data"
-    tty: true
+    command:
+      [
+        "ros2",
+        "run",
+        "py_pubsub",
+        "listener",
+        "--ros-args",
+        "--remap",
+        "/image:=${TELLO_IMAGE_RAW}"
+      ]
   tello:
     build: ./tello
+  console:
+    build: ./rqt
+    environment:
+      - DISPLAY=host.docker.internal:0
+    command: [ "ros2", "run", "rqt_console", "rqt_console" ]
