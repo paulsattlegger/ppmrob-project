@@ -58,6 +58,21 @@ def pt_to_cv2(rgb8_image):
     return cv_bgr8_image
 
 
+def calc_distance(box):
+    _, ytl, _, ybr = box
+    object_height = abs(ytl - ybr)  # px
+    distance = (FOCAL_LENGTH * REAL_HEIGHT * IMAGE_HEIGHT) / (
+        object_height * SENSOR_HEIGHT
+    )
+    return distance
+
+
+def calc_center(box):
+    xtl, ytl, xbr, ybr = box
+    center = [(xtl + xbr) / 2, (ytl + ybr) / 2]
+    return center
+
+
 class MinimalSubscriber(Node):
     def __init__(self):
         super().__init__("minimal_subscriber")
@@ -69,11 +84,11 @@ class MinimalSubscriber(Node):
             String, "/distance", 10
         )
         self.publisher_bounding_box = self.create_publisher(Image, "/bounding_box", 10)
-        self.model = self.load_model()
         # inference on the GPU or on the CPU, if a GPU is not available
         self.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
+        self.model = self.load_model()
         # move model to the right device
         self.model.to(self.device)
 
@@ -104,7 +119,11 @@ class MinimalSubscriber(Node):
         in_features = model.roi_heads.box_predictor.cls_score.in_features
         # replace the pre-trained head with a new one
         model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-        model.load_state_dict(torch.load("data/model/fasterrcnn_resnet50_fpn.pt"))
+        model.load_state_dict(
+            torch.load(
+                "data/model/fasterrcnn_resnet50_fpn.pt", map_location=self.device
+            )
+        )
         return model
 
     def inference(self, image):
@@ -114,25 +133,10 @@ class MinimalSubscriber(Node):
             prediction = self.model([image.to(self.device)])
         return prediction
 
-    @staticmethod
-    def calc_distance(box):
-        _, ytl, _, ybr = box
-        object_height = abs(ytl - ybr)  # px
-        distance = (FOCAL_LENGTH * REAL_HEIGHT * IMAGE_HEIGHT) / (
-            object_height * SENSOR_HEIGHT
-        )
-        return distance
-
-    @staticmethod
-    def calc_center(box):
-        xtl, ytl, xbr, ybr = box
-        center = [(xtl + xbr) / 2, (ytl + ybr) / 2]
-        return center
-
     def publish_distance_movement(self, box):
         _, ytl, _, ybr = box
-        distance = self.calc_distance(box)
-        box_center_x, _ = self.calc_center(box)
+        distance = calc_distance(box)
+        box_center_x, _ = calc_center(box)
         msg = String()
         object_height = abs(ytl - ybr)
         scale = object_height / REAL_HEIGHT
