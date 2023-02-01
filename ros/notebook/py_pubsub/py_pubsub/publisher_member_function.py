@@ -33,7 +33,6 @@ class MinimalPublisher(Node):
         image = cv2.imread(path)
         msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
         self.publisher_.publish(msg)
-        self.get_logger().info(f"Publishing {path}")
         self.i += 1
 
 
