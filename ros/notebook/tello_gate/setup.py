@@ -19,9 +19,9 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            f"replay = {package_name}.publisher_member_function:main",
-            f"buffer = {package_name}.subscriber_member_function:main",
-            f"inference = {package_name}.client_member_function:main",
+            f"replay = {package_name}.replay_node:main",
+            f"buffer = {package_name}.buffer_node:main",
+            f"inference = {package_name}.inference_node:main",
         ],
     },
 )

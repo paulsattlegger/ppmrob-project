@@ -4,9 +4,9 @@ from sensor_msgs.msg import Image
 from tello_gate_msgs.srv import CurrentImage
 
 
-class MinimalSubscriber(Node):
+class BufferNode(Node):
     def __init__(self):
-        super().__init__("minimal_subscriber")
+        super().__init__("buffer_node")
         self.sub = self.create_subscription(Image, "/image", self.listener_callback, 10)
         self.srv = self.create_service(
             CurrentImage, "get_current_image", self.get_current_image_callback
@@ -26,14 +26,14 @@ class MinimalSubscriber(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_subscriber = MinimalSubscriber()
+    buffer_node = BufferNode()
 
-    rclpy.spin(minimal_subscriber)
+    rclpy.spin(buffer_node)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_subscriber.destroy_node()
+    buffer_node.destroy_node()
     rclpy.shutdown()
 
 

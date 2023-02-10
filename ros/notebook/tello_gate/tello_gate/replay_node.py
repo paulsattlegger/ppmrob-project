@@ -7,9 +7,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 
 
-class MinimalPublisher(Node):
+class ReplayNode(Node):
     def __init__(self):
-        super().__init__("minimal_publisher")
+        super().__init__("replay_node")
         self.bridge = CvBridge()
         self.publisher_ = self.create_publisher(Image, "/image", 10)
         timer_period = 1 / 30  # seconds
@@ -28,15 +28,15 @@ class MinimalPublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+    replay_node = ReplayNode()
 
-    while minimal_publisher.i <= 5608:
-        rclpy.spin_once(minimal_publisher)
+    while replay_node.i <= 5608:
+        rclpy.spin_once(replay_node)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
+    replay_node.destroy_node()
     rclpy.shutdown()
 
 

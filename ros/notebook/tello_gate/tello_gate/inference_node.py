@@ -58,9 +58,9 @@ def calc_center(box):
     return center
 
 
-class MinimalClientAsync(Node):
+class InferenceNode(Node):
     def __init__(self):
-        super().__init__("minimal_client_async")
+        super().__init__("inference_node")
         self.cli = self.create_client(CurrentImage, "get_current_image")
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("service not available, waiting again...")
@@ -168,20 +168,20 @@ class MinimalClientAsync(Node):
 def main():
     rclpy.init()
 
-    minimal_client = MinimalClientAsync()
+    inference_node = InferenceNode()
 
     while rclpy.ok():
         try:
-            response = minimal_client.send_request()
+            response = inference_node.send_request()
         except Exception as e:
-            minimal_client.get_logger().info(f"Service call failed {e}")
+            inference_node.get_logger().info(f"Service call failed {e}")
         else:
-            minimal_client.handle_request(response.image)
+            inference_node.handle_request(response.image)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_client.destroy_node()
+    inference_node.destroy_node()
     rclpy.shutdown()
 
 
