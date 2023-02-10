@@ -6,6 +6,8 @@ from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
+BASE_DIR = Path("data/images")
+
 
 class ReplayNode(Node):
     def __init__(self):
@@ -17,9 +19,10 @@ class ReplayNode(Node):
         self.i = 0
 
     def timer_callback(self):
-        path = f"data/images/picture5_{self.i}.png"
-        self.get_logger().error(f"Publishing image {Path(path).absolute()}")
-        cv_bgr8_image = cv2.imread(path)
+        path = BASE_DIR / f"picture5_{self.i}.png"
+        self.get_logger().error(f"Publishing image {path}")
+
+        cv_bgr8_image = cv2.imread(str(path))
 
         cv2.imshow("Live", cv_bgr8_image)
         cv2.waitKey(1)
@@ -34,7 +37,9 @@ def main(args=None):
 
     replay_node = ReplayNode()
 
-    while replay_node.i <= 5608:
+    limit = int(max(BASE_DIR.iterdir()).stem.rsplit("_", 1)[1])
+
+    while replay_node.i <= limit:
         rclpy.spin_once(replay_node)
 
     # Destroy the node explicitly
