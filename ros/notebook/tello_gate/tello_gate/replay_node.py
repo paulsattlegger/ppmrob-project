@@ -19,8 +19,12 @@ class ReplayNode(Node):
     def timer_callback(self):
         path = f"data/images/picture5_{self.i}.png"
         self.get_logger().error(f"Publishing image {Path(path).absolute()}")
-        image = cv2.imread(path)
-        msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
+        cv_bgr8_image = cv2.imread(path)
+
+        cv2.imshow("Live", cv_bgr8_image)
+        cv2.waitKey(1)
+
+        msg = self.bridge.cv2_to_imgmsg(cv_bgr8_image, encoding="bgr8")
         self.publisher_.publish(msg)
         self.i += 1
 
