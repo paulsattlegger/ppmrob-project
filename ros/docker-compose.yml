@@ -1,6 +1,11 @@
 version: "3.9"
 services:
-  view1:
+  tello:
+    build: ./tello
+    environment:
+      - DISPLAY=host.docker.internal:0
+    network_mode: "host"
+  buffer:
     build: ./notebook
     environment:
       - DISPLAY=host.docker.internal:0
@@ -8,38 +13,24 @@ services:
       [
         "ros2",
         "run",
-        "image_view",
-        "image_view",
+        "tello_gate",
+        "buffer",
         "--ros-args",
         "--remap",
-        "/image:=${TELLO_IMAGE_RAW}",
-        "-p",
-        "autosize:=true"
+        "/image:=${TELLO_IMAGE_RAW}"
       ]
-  view2:
-    build: ./notebook
-    environment:
-      - DISPLAY=host.docker.internal:0
-    command:
-      [
-        "ros2",
-        "run",
-        "image_view",
-        "image_view",
-        "--ros-args",
-        "--remap",
-        "/image:=${BOUNDING_BOX_IMAGE_RAW}",
-        "-p",
-        "autosize:=true"
-      ]
+    volumes:
+      - "./notebook:/opt/ros/overlay_ws/src"
   replay:
     build: ./notebook
+    environment:
+      - DISPLAY=host.docker.internal:0
     command:
       [
         "ros2",
         "run",
-        "py_pubsub",
-        "talker",
+        "tello_gate",
+        "replay",
         "--ros-args",
         "--remap",
         "/image:=${TELLO_IMAGE_RAW}"
@@ -47,27 +38,24 @@ services:
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
       - "./data:/opt/ros/overlay_ws/data"
-  console:
+  inference:
     build: ./notebook
     environment:
       - DISPLAY=host.docker.internal:0
-    command: [ "ros2", "run", "rqt_console", "rqt_console" ]
-  inference:
-    build: ./notebook
+    command:
+      [
+        "ros2",
+        "run",
+        "tello_gate",
+        "inference",
+        "--ros-args",
+        "--remap",
+        "/image:=${TELLO_IMAGE_RAW}"
+      ]
     volumes:
       - "./notebook:/opt/ros/overlay_ws/src"
       - "./data:/opt/ros/overlay_ws/data"
       - "~/.cache:/root/.cache"
-    command:
-      [
-        "ros2",
-        "run",
-        "py_pubsub",
-        "listener",
-        "--ros-args",
-        "--remap",
-        "/image:=${TELLO_IMAGE_RAW}"
-      ]
     deploy:
       resources:
         reservations:
@@ -75,5 +63,8 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [ gpu ]
-  tello:
-    build: ./tello
+  console:
+    build: ./notebook
+    environment:
+      - DISPLAY=host.docker.internal:0
+    command: [ "ros2", "run", "rqt_console", "rqt_console" ]

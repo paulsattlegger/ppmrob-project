@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = "py_pubsub"
+package_name = "tello_gate"
 
 setup(
     name=package_name,
@@ -19,9 +19,9 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "talker = py_pubsub.publisher_member_function:main",
-            "listener = py_pubsub.subscriber_member_function:main",
-            "client = py_pubsub.client_member_function:main",
+            f"replay = {package_name}.publisher_member_function:main",
+            f"buffer = {package_name}.subscriber_member_function:main",
+            f"inference = {package_name}.client_member_function:main",
         ],
     },
 )

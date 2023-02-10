@@ -1,8 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-
-from interfaces.srv import CurrentImage
+from tello_gate_msgs.srv import CurrentImage
 
 
 class MinimalSubscriber(Node):

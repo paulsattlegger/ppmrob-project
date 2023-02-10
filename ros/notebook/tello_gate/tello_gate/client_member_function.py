@@ -3,16 +3,16 @@ from enum import Enum
 
 import cv2
 import rclpy
-import torch
 import torchvision
 import torchvision.transforms as transforms
 from cv_bridge import CvBridge, CvBridgeError
 from rclpy.node import Node
 from std_msgs.msg import String
+from tello_gate_msgs.srv import CurrentImage
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.utils import draw_bounding_boxes
 
-from interfaces.srv import CurrentImage
+import torch
 
 IMG_CENTER_X = 480
 IMG_CENTER_Y = 360
@@ -81,8 +81,8 @@ class MinimalClientAsync(Node):
     def send_request(self):
         self.future = self.cli.call_async(self.req)
         rclpy.spin_until_future_complete(self, self.future)
-        response = self.future.result()
-    
+        return self.future.result()
+
     def handle_request(self, msg):
         try:
             # convert the image from BGR to RGB format
@@ -97,7 +97,7 @@ class MinimalClientAsync(Node):
         if len(prediction[0]["boxes"]) > 0:
             box = prediction[0]["boxes"][0]
             self.publish_distance_movement(box)
-            self.publish_bounding_box(cv_rgb8_image, prediction)
+            self.show_bounding_box(cv_rgb8_image, prediction)
 
     def load_model(self):
         # our dataset has three classes - background, front and back
@@ -150,7 +150,7 @@ class MinimalClientAsync(Node):
                 labels.append(txt)
         return labels
 
-    def publish_bounding_box(self, cv_rgb8_image, prediction):
+    def show_bounding_box(self, cv_rgb8_image, prediction):
         labels = self.extract_labels(prediction)
 
         pt_rgb8_image = draw_bounding_boxes(
@@ -162,8 +162,7 @@ class MinimalClientAsync(Node):
         )
         cv_bgr8_image = pt_to_cv2(pt_rgb8_image)
 
-        self.get_logger().info("Converting image")
-        cv2.imshow("Bounding box", cv_bgr8_image)        
+        cv2.imshow("Bounding box", cv_bgr8_image)
         cv2.waitKey(1)
 
 
@@ -173,20 +172,16 @@ def main():
     minimal_client = MinimalClientAsync()
 
     while rclpy.ok():
-        minimal_client.send_request()
+        try:
+            response = minimal_client.send_request()
+        except Exception as e:
+            minimal_client.get_logger().info(f"Service call failed {e}")
+        else:
+            minimal_client.handle_request(response.image)
 
-        while rclpy.ok():
-            rclpy.spin_once(minimal_client)
-            if minimal_client.future.done():
-                try:
-                    response = minimal_client.future.result()
-                except Exception as e:
-                    minimal_client.get_logger().info(
-                        'Service call failed %r' % (e,))
-                else:
-                    minimal_client.handle_request(response.image)
-                break
-    
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
     minimal_client.destroy_node()
     rclpy.shutdown()
 
