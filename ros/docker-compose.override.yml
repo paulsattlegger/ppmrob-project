@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  tello:
+    environment:
+      - DISPLAY
+  buffer:
+    environment:
+      - DISPLAY
+    volumes:
+      - "/tmp/.X11-unix/:/tmp/.X11-unix/"
+  replay:
+    environment:
+      - DISPLAY
+    volumes:
+      - "/tmp/.X11-unix/:/tmp/.X11-unix/"
+  inference:
+    build: ./notebook
+    environment:
+      - DISPLAY
+    volumes:
+      - "/tmp/.X11-unix/:/tmp/.X11-unix/"
+  console:
+    build: ./notebook
+    environment:
+      - DISPLAY
+    volumes:
+      - "/tmp/.X11-unix/:/tmp/.X11-unix/"
