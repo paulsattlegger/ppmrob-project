@@ -46,9 +46,8 @@ def pt_to_cv2(rgb8_image):
 def calc_distance(box):
     _, ytl, _, ybr = box
     object_height = abs(ytl - ybr)  # px
-    distance = (FOCAL_LENGTH * REAL_HEIGHT * IMAGE_HEIGHT) / (
-        object_height * SENSOR_HEIGHT
-    )
+    distance = ((FOCAL_LENGTH * REAL_HEIGHT * IMAGE_HEIGHT) / (
+        object_height * SENSOR_HEIGHT)) * 2
     return distance
 
 
