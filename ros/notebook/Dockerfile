@@ -27,6 +27,8 @@ RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
 ARG OVERLAY_WS
 WORKDIR $OVERLAY_WS/src/py_pubsub
 ADD py_pubsub .
+WORKDIR $OVERLAY_WS/src/interfaces
+ADD interfaces .
 
 # build overlay source
 ARG OVERLAY_MIXINS="release"
@@ -35,7 +37,7 @@ WORKDIR $OVERLAY_WS
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     colcon build \
     --packages-select \
-    py_pubsub \
+    py_pubsub interfaces \
     --mixin $OVERLAY_MIXINS
 
 # source entrypoint setup
