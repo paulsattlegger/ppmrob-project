@@ -1,17 +1,17 @@
-talker: build
+replay: build
 	. /opt/ros/overlay_ws/install/setup.sh && \
 	cd .. && \
-	ros2 run tello_gate talker
+	ros2 run tello_gate replay
 
-listener: build
+buffer: build
 	. /opt/ros/overlay_ws/install/setup.sh && \
 	cd .. && \
-	ros2 run tello_gate listener
+	ros2 run tello_gate buffer
 
-client: build
+inference: build
 	. /opt/ros/overlay_ws/install/setup.sh && \
 	cd .. && \
-	ros2 run tello_gate client
+	ros2 run tello_gate inference
 
 build:
 	. /opt/ros/humble/setup.sh && \
